@@ -2,7 +2,7 @@ import { SITE } from './config.mjs';
 import { documents } from './docs.mjs';
 import { homePage, infoPage } from './html.mjs';
 import { DEMO } from './demo.mjs';
-import { TIERS, normalize, matchAnswer, etDate, resetAt, ROUND_MS, PREVIEW_MS } from '../public/rules.mjs';
+import { TIERS, normalize, matchAnswer, etDate, resetAt, ROUND_MS, PREVIEW_MS, MAX_SCORE } from '../public/rules.mjs';
 
 const cache = new Map();
 const json = (data, status = 200, extra = {}) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store', ...extra } });
@@ -23,8 +23,8 @@ export function validateReference(today, reveal, date) {
 }
 export async function syncPuzzle(env, date = etDate()) {
   const [t, r] = await Promise.all([
-    fetch('https://krillion.io/api/today', { signal: AbortSignal.timeout(12000), headers: { 'User-Agent': 'OpenKrillion/1.0 (+https://openkrillion.com/about)' } }),
-    fetch(`https://krillion.io/api/reveal?date=${date}`, { signal: AbortSignal.timeout(12000), headers: { 'User-Agent': 'OpenKrillion/1.0 (+https://openkrillion.com/about)' } }),
+    fetch('https://krillion.io/api/today', { signal: AbortSignal.timeout(12000), headers: { 'User-Agent': 'Krillion/1.0 (+https://openkrillion.com/about)' } }),
+    fetch(`https://krillion.io/api/reveal?date=${date}`, { signal: AbortSignal.timeout(12000), headers: { 'User-Agent': 'Krillion/1.0 (+https://openkrillion.com/about)' } }),
   ]);
   if (!t.ok || !r.ok) throw new Error('Reference service unavailable');
   const puzzle = validateReference(await t.json(), await r.json(), date);
@@ -80,8 +80,8 @@ async function api(request, env, url) {
     const population = (await env.DB.prepare("SELECT r.id,SUM(a.score) AS score FROM runs r JOIN answers a ON a.run_id=r.id WHERE r.date=? AND r.mode='daily' AND r.completed=1 GROUP BY r.id").bind(run.date).all()).results;
     const own = await state(env, run);
     const others = population.filter(p => p.id !== run.id);
-    const dist = Array.from({ length: 71 }, () => 0);
-    others.forEach(p => dist[Math.min(70, Math.floor(p.score / 10))]++);
+    const dist = Array.from({ length: MAX_SCORE / 10 + 1 }, () => 0);
+    others.forEach(p => dist[Math.min(MAX_SCORE / 10, Math.floor(p.score / 10))]++);
     return json({ prompts: puzzle.prompts.map(p => ({ ...p, answers: p.answers.map(a => ({ ...a, score: TIERS[a.tier].score })).sort((a,b) => b.score - a.score || a.answer.localeCompare(b.answer)) })), population: others.length, betterThan: others.length >= 5 ? Math.round(others.filter(p => p.score < own.score).length / others.length * 100) : null, dist });
   }
   if (request.method !== 'POST') return fail('Unknown endpoint.', 404);
@@ -137,7 +137,7 @@ async function api(request, env, url) {
     const now = Date.now();
     await env.DB.batch([
       env.DB.prepare('INSERT OR IGNORE INTO answers(run_id,round,raw_answer,answer,tier,score,created_at) SELECT id,?,?,?,?,?,? FROM runs WHERE id=? AND next_round=? AND round_start IS NOT NULL AND completed=0').bind(result.round,result.rawAnswer,result.answer,result.tier,result.score,now,run.id,result.round),
-      env.DB.prepare('UPDATE runs SET next_round=?,round_start=NULL,completed=? WHERE id=? AND next_round=? AND EXISTS(SELECT 1 FROM answers WHERE run_id=? AND round=?)').bind(result.round+1,result.round===6?1:0,run.id,result.round,run.id,result.round),
+      env.DB.prepare('UPDATE runs SET next_round=?,round_start=NULL,completed=? WHERE id=? AND next_round=? AND EXISTS(SELECT 1 FROM answers WHERE run_id=? AND round=?)').bind(result.round+1,result.round>=puzzle.prompts.length-1?1:0,run.id,result.round,run.id,result.round),
     ]);
     const fresh = await state(env, await ownRun(env,run.id,player));
     const accepted = fresh.results.find(r => r.round === result.round);

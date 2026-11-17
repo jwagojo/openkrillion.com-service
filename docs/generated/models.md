@@ -1,11 +1,11 @@
-# OpenKrillion models and game capabilities
+# Krillion models and game capabilities
 
 Canonical: https://openkrillion.com/models.md
 
 No generative AI model is available or called by this game. The models.md filename follows the agent documentation convention; this is a trivia game, not an AI generation workspace.
 
 ## Available workflows
-- Daily seven-prompt trivia
+- Daily four-prompt trivia
 - Practice dives
 - Six rarity tiers
 - Typo correction with confirmation

@@ -1,4 +1,4 @@
-# OpenKrillion 🦐
+# Krillion 🦐
 
 An independent, open-source daily rare-answer trivia game. Play at **[openkrillion.com](https://openkrillion.com)**.
 

@@ -38,9 +38,9 @@ try{
     await page.waitForFunction(()=>JSON.parse(window.render_game_to_text()).phase==='landed',{timeout:20000});
   }
   await page.locator('#next-btn').click();await page.waitForFunction(()=>JSON.parse(window.render_game_to_text()).phase==='done',{timeout:20000});await page.waitForFunction(()=>!document.getElementById('distribution').textContent.includes('Sounding'));
-  const state=await page.evaluate(()=>JSON.parse(window.render_game_to_text()));assert.equal(state.results.length,7);assert.ok(state.score>=300);assert.equal(state.results[6].score,local?0:100);assert.equal(state.sound.state,'running');
+  const state=await page.evaluate(()=>JSON.parse(window.render_game_to_text()));assert.equal(state.results.length,state.totalRounds);assert.ok(state.score>=300);assert.equal(state.results[state.totalRounds-1].score,local?0:100);assert.equal(state.sound.state,'running');
   await page.screenshot({path:output+'/desktop-results.png'});await page.locator('[data-review="3"]').click();assert.ok(await page.locator('.review-expanded').nth(3).isVisible());
-  await page.locator('#copy-result').click();assert.ok((await page.evaluate(()=>navigator.clipboard.readText())).includes('OpenKrillion'));
+  await page.locator('#copy-result').click();assert.ok((await page.evaluate(()=>navigator.clipboard.readText())).includes('Krillion'));
   await page.reload();await page.waitForFunction(()=>JSON.parse(window.render_game_to_text()).phase==='done');assert.equal(JSON.parse(await page.evaluate(()=>window.render_game_to_text())).score,state.score);report.push({desktop:'pass',game:state});
   const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1,colorScheme:'light'});const mp=await mobile.newPage();mp.on('pageerror',e=>errors.push(e.message));
   await mp.goto(base+'/?test=1&lang=zh');await mp.waitForFunction(()=>window.render_game_to_text);await mp.evaluate(()=>document.fonts.ready);await mp.waitForFunction(()=>/DIVE #/.test(document.getElementById('day-number').textContent));await mp.screenshot({path:output+'/mobile-home.png'});

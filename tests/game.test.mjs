@@ -36,28 +36,29 @@ test('New York reset follows DST rather than device midnight',()=>{
 });
 test('answer matching normalizes accents, uses known aliases and avoids short fuzzy guesses',()=>{
   assert.equal(normalize('São Tomé & Príncipe'),'saotomeandprincipe');
-  assert.equal(matchAnswer('mashed',DEMO.prompts[0].answers).answer,'Mashed potatoes');
-  assert.equal(matchAnswer('Yttrum',DEMO.prompts[3].answers).correction,true);
-  assert.equal(matchAnswer('xyz',DEMO.prompts[3].answers),null);
+  assert.equal(matchAnswer('wes',DEMO.prompts[0].answers).answer,'Wesley');
+  assert.equal(matchAnswer('Sowndaryen',DEMO.prompts[0].answers).correction,true);
+  assert.equal(matchAnswer('xyz',DEMO.prompts[0].answers),null);
   assert.equal(matchAnswer('zzzzzzzzzz',DEMO.prompts[0].answers),null);
 });
 test('reference import validates date, question identity and tier whitelist',()=>{
-  const date='2026-10-17';const today={date,dayNumber:94,prompts:DEMO.prompts.map(({id,text})=>({id,text}))},reveal={date,prompts:structuredClone(DEMO.prompts)};
+  const date='2026-10-17',seven=Array.from({length:7},(_,i)=>({...DEMO.prompts[i%DEMO.prompts.length],id:'r'+i}));const today={date,dayNumber:94,prompts:seven.map(({id,text})=>({id,text}))},reveal={date,prompts:structuredClone(seven)};
   assert.equal(validateReference(today,reveal,date).prompts.length,7);
   assert.throws(()=>validateReference(today,{...reveal,date:'2026-10-18'},date));
   reveal.prompts[0].text='Different question';assert.throws(()=>validateReference(today,reveal,date));
 });
-test('seven rounds are scored on server; retries cannot duplicate points; other browsers cannot read the run',async()=>{
+test('every round is scored on server; retries cannot duplicate points; other browsers cannot read the run',async()=>{
   const s=service();let{body:game}=await s.call('/api/start',{});const id=game.runId;
-  const correction=await s.call('/api/answer',{runId:id,round:0,answer:'mashed'});assert.equal(correction.body.correction,'Mashed potatoes');
+  const correction=await s.call('/api/answer',{runId:id,round:0,answer:'wes'});assert.equal(correction.body.correction,'Wesley');
   const rejected=await s.call('/api/answer',{runId:id,round:0,answer:'zzzzzzzzzz'});assert.equal(rejected.body.rejected,true);
-  for(let i=0;i<7;i++){
-    const answer=DEMO.prompts[i].answers.find(a=>a.tier==='krillion').answer;
-    const result=await s.call('/api/answer',{runId:id,round:i,answer,confirm:true,score:99999});assert.equal(result.status,200);assert.equal(result.body.result.score,TIERS.krillion.score);game=result.body.state;
+  const rounds=DEMO.prompts.length;assert.equal(rounds,SITE.rounds);let total=0;
+  for(let i=0;i<rounds;i++){
+    const best=[...DEMO.prompts[i].answers].sort((x,y)=>TIERS[y.tier].score-TIERS[x.tier].score)[0],answer=best.answer;total+=TIERS[best.tier].score;
+    const result=await s.call('/api/answer',{runId:id,round:i,answer,confirm:true,score:99999});assert.equal(result.status,200);assert.equal(result.body.result.score,TIERS[best.tier].score);game=result.body.state;
     const duplicate=await s.call('/api/answer',{runId:id,round:i,answer});assert.equal(duplicate.body.alreadyScored,true);assert.equal(duplicate.body.state.results.length,i+1);
-    if(i<6){const n=await s.call('/api/next',{runId:id});assert.equal(n.body.round,i+1);}
+    if(i<rounds-1){const n=await s.call('/api/next',{runId:id});assert.equal(n.body.round,i+1);}
   }
-  assert.equal(game.score,700);assert.equal(game.completed,true);
+  assert.equal(game.score,total);assert.equal(game.completed,true);
   const same=await s.call('/api/start',{});assert.equal(same.body.runId,id);
   const review=await s.call('/api/review?run='+id);assert.equal(review.status,200);assert.equal(review.body.betterThan,null);assert.equal(review.body.population,0);
   const other=service();const missing=await other.call('/api/state?run='+id);assert.equal(missing.status,404);
@@ -95,5 +96,5 @@ test('SSR SEO exposes an expandable guide, correct canonical and no crawler-spec
   assert.ok(words.length>1500);assert.ok(density>.03);assert.ok(!html.includes('googlebot'));
 });
 test('public docs GET and HEAD are readable UTF-8 and not SPA HTML',async()=>{
-  const s=service();for(const path of Object.keys(documents()))for(const method of ['GET','HEAD']){const r=await worker.fetch(new Request('http://localhost:3051'+path,{method}),s.env,{});assert.equal(r.status,200);assert.match(r.headers.get('Content-Type'),/text\/plain; charset=utf-8/);const body=await r.text();if(method==='HEAD')assert.equal(body,'');else{assert.ok(body.startsWith('# OpenKrillion'));assert.ok(!body.includes('<!doctype html>'));}}s.env.DB.close();
+  const s=service();for(const path of Object.keys(documents()))for(const method of ['GET','HEAD']){const r=await worker.fetch(new Request('http://localhost:3051'+path,{method}),s.env,{});assert.equal(r.status,200);assert.match(r.headers.get('Content-Type'),/text\/plain; charset=utf-8/);const body=await r.text();if(method==='HEAD')assert.equal(body,'');else{assert.ok(body.startsWith('# Krillion'));assert.ok(!body.includes('<!doctype html>'));}}s.env.DB.close();
 });

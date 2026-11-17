@@ -7,15 +7,16 @@ export const TIERS = {
   krillion: { name: 'One in a Krillion', score: 100, emoji: '🌟', color: '#ffd166', blurb: 'The designated gem. Trench floor.' },
 };
 export const BANDS = [
-  { min: 0, max: 150, tier: 'plankton', name: 'Plankton', text: 'Plenty of ocean left down there.' },
-  { min: 151, max: 250, tier: 'schooler', name: 'Schooler', text: 'Swimming with the school.' },
-  { min: 251, max: 350, tier: 'rare', name: 'Rare', text: 'Below the thermocline. Nice.' },
-  { min: 351, max: 449, tier: 'deepcut', name: 'Deep cut', text: 'Seriously deep dive.' },
-  { min: 450, max: 700, tier: 'krillion', name: 'One in a krillion', text: 'Trench dweller. Absurd.' },
+  { min: 0, max: 80, tier: 'plankton', name: 'Plankton', text: 'Plenty of ocean left down there.' },
+  { min: 81, max: 140, tier: 'schooler', name: 'Schooler', text: 'Swimming with the school.' },
+  { min: 141, max: 200, tier: 'rare', name: 'Rare', text: 'Below the thermocline. Nice.' },
+  { min: 201, max: 260, tier: 'deepcut', name: 'Deep cut', text: 'Seriously deep dive.' },
+  { min: 261, max: 400, tier: 'krillion', name: 'One in a krillion', text: 'Trench dweller. Absurd.' },
 ];
 export const ROUND_MS = 25000;
 export const PREVIEW_MS = 3000;
-export const ROUNDS = 7;
+export const ROUNDS = 4;
+export const MAX_SCORE = ROUNDS * 100;
 export const bandFor = score => [...BANDS].reverse().find(b => score >= b.min) || BANDS[0];
 export const normalize = value => String(value).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]/g, '');
 export function etDate(now = Date.now()) {
@@ -52,5 +53,5 @@ export function matchAnswer(input, answers) {
 }
 export function shareText(day, results) {
   const score = results.reduce((s, r) => s + r.score, 0);
-  return `OpenKrillion #${day} 🦐\n${score}/700 · ${score * 10}m\n${results.map(r => TIERS[r.tier]?.emoji || '⬛').join('')}\nhttps://openkrillion.com`;
+  return `Krillion #${day} 🦐\n${score}/${MAX_SCORE} · ${score * 10}m\n${results.map(r => TIERS[r.tier]?.emoji || '⬛').join('')}\nhttps://openkrillion.com`;
 }
